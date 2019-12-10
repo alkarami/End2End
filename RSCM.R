@@ -121,7 +121,7 @@ df <- as.data.frame(colData(rld)[,c('samples','group')])
 pheatmap(mat, annotation_col=df, cluster_cols = F)
 
 # Cutoff the FC 
-IL13_7v1[which(IL13_7v1$log2FoldChange>=abs(1)),]
+sig7v1ds <- IL13_7v1[which(IL13_7v1$log2FoldChange>=abs(1)),]
 
 # Cutoff the pvalue (padj)
 sig7v1ds <- sig7v1ds[which(sig7v1ds$padj<=0.05),]
