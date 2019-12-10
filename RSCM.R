@@ -130,5 +130,5 @@ sig7v1ds <- sig7v1ds[which(sig7v1ds$padj<=0.1),]
 write.csv(as.data.frame(sig7v1ds[,c(7,2)],row.names = NULL), file = 'RSCM_IL13_7v1.csv')
 
 # Test no FC cutoff
-sig7v1ds <- IL13_7v1[which(sig7v1ds$padj<=0.1),]
+sig7v1ds <- IL13_7v1[which(IL13_7v1$padj<=0.1),]
 write.csv(as.data.frame(sig7v1ds[,c(7,2)],row.names = NULL), file = 'RSCM_IL13_7v1.csv')
