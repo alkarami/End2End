@@ -38,12 +38,18 @@ for (x in afiles){
   align('h_index',x)
 }
 
+################ DAY 2 ##############################################################
+
+## Speed things up! Parallelize everything. I have 8 cores, so I'll use them all.
+library("Biocparallel")
+register(SnowParam(8))
+
 ## Map all the reads to genomic "features"(genes) with featureCounts
 # All files with .BAM as the *end*
 bams <- list.files(pattern = '.BAM$')
 # Save the counts as a matrix
 fc <- featureCounts(files=bams, annot.ext = 'gencode.v32.annotation.gtf.gz',
-                    isGTFAnnotationFile = T)
+                    isGTFAnnotationFile = T, nthreads = 8)
 
 ## Rename observations according to metadata
 meta <- read.csv('reshu_meta.csv')
@@ -53,10 +59,67 @@ colnames(fc$counts) <- meta$samples
 # Rows should be the Ensemble gene ID's (I.e. 'ENSGxxxxx.5')
 fc$counts
 
-## Speed things up! Parallelize everything
-library("Biocparallel")
-register(SnowParam(8))
+## Now we start with DESeq2
+library(DESeq2)
 
+# Create DESeqDataSet 
+IL13ds <- DESeqDataSetFromMatrix(countData = fc$counts, colData = meta, design = ~group)
 
+# Run DESeq2, which is the core of the code. It is *very* fast.
+IL13dds <- DESeq(IL13ds)
 
+# Run PCA to see how similar the samples are
+rld <- rlog(IL13dds)
+plotPCA(rld,intgroup = 'group')
 
+# Let's check out results
+IL13_3v1 <- results(IL13dds, contrast = c('group','3d','cont'), alpha = 0.05)
+IL13_7v1 <- results(IL13dds, contrast = c('group','7d','cont'), alpha = 0.05)
+
+# Add gene symbols to the results
+library(stringr)
+gene_ids <- str_replace(row.names(IL13dds),
+                        pattern = ".[0-9]+$",
+                        replacement = "")
+
+BiocManager::install(c('AnnotationDbi','org.Hs.eg.db'), ask = F, update = T)
+
+library("AnnotationDbi")
+library("org.Hs.eg.db")
+symbols <- mapIds(org.Hs.eg.db,
+                  keys=gene_ids,
+                  column="SYMBOL",
+                  keytype="ENSEMBL",
+                  multiVals="first")
+
+IL13_3v1$Symbols <- symbols
+IL13_7v1$Symbols <- symbols
+
+# Check it out with a volcano plot
+library(EnhancedVolcano)
+EnhancedVolcano(IL13_3v1, IL13_7v1$Symbols,'log2FoldChange','padj')
+EnhancedVolcano(IL13_7v1, IL13_7v1$Symbols,'log2FoldChange','padj')
+
+# Make a heatmap
+library(genefilter)
+library(pheatmap)
+
+rld <- rlog(IL13dds)
+topVarGenes <- head(order(-rowVars(assay(rld))),20)
+mat <- assay(rld)[ topVarGenes, ]
+heat_ids <- str_replace(row.names(mat),
+                        pattern = ".[0-9]+$",
+                        replacement = "")
+heatsyms <- mapIds(org.Hs.eg.db,
+                              keys=heat_ids,
+                              column="SYMBOL",
+                              keytype="ENSEMBL",
+                              multiVals="first")
+rownames(mat) <- heatsyms
+mat <- mat - rowMeans(mat)
+df <- as.data.frame(colData(rld)[,c('samples','group')])
+pheatmap(mat, annotation_col=df, cluster_cols = F)
+
+# Write results
+write.csv(as.data.frame(IL13_3v1[,c(7,2,6)],row.names = NULL), file = 'RSCM_IL13_3v1.csv')
+write.csv(as.data.frame(IL13_7v1[,c(7,2,6)],row.names = NULL), file = 'RSCM_IL13_7v1.csv')
