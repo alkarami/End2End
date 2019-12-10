@@ -41,7 +41,7 @@ for (x in afiles){
 ################ DAY 2 ##############################################################
 
 ## Speed things up! Parallelize everything. I have 8 cores, so I'll use them all.
-library("Biocparallel")
+library("BiocParallel")
 register(SnowParam(8))
 
 ## Map all the reads to genomic "features"(genes) with featureCounts
