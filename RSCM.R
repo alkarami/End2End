@@ -124,7 +124,7 @@ pheatmap(mat, annotation_col=df, cluster_cols = F)
 sig7v1ds <- IL13_7v1[which(IL13_7v1$log2FoldChange>=abs(1)),]
 
 # Cutoff the pvalue (padj)
-sig7v1ds <- sig7v1ds[which(sig7v1ds$padj<=0.05),]
+sig7v1ds <- sig7v1ds[which(sig7v1ds$padj<=0.1),]
 
 # Write results
 write.csv(as.data.frame(sig7v1ds[,c(7,2)],row.names = NULL), file = 'RSCM_IL13_7v1.csv')
