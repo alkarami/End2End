@@ -1,8 +1,8 @@
-## WARNING: DO NOT PERFORM OPERATIONS WITH SHORTREAD AND RSUBREAD (EXCEPT FOR FEATURECOUNTS)
-## DURING THE WORKSHOP, AS IT IS MEMORY-INTENSIVE AND WILL TAKE A VERY LONG TIME
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install()
 
-## INSTEAD, USE THE FILES PROVIDED OUTSIDE OF THE FOLDERS. FOR THE WORKSHOP, START WITH 
-## THE LINE 'BAMS'
+BiocManager::install(c('ShortRead','Rsubread','DESeq2','EnhancedVolcano','genefilter','pheatmap','Rsamtools'), update = T, ask = F)
 
 library(ShortRead)
 
