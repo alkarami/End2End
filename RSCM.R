@@ -1,8 +1,6 @@
-if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
-BiocManager::install()
-
-BiocManager::install(c('ShortRead','Rsubread','DESeq2','EnhancedVolcano','genefilter','pheatmap','Rsamtools'), update = T, ask = F)
+## Speed things up! Parallelize everything. I have 8 cores, so I'll use them all.
+library("BiocParallel")
+register(SnowParam(8))
 
 library(ShortRead)
 
@@ -16,14 +14,21 @@ for (x in paths){
   # contained. Here it is the 3rd element of the 1st element ([[1]][3]) of the string x 
   # after we've split it (strsplit()) by the '/'. We want to add the extension .fastq, 
   # so we paste '.fastq' to the end of the name
-  outname <- paste(strsplit(x,'/')[[1]][3],'.fastq', sep = '')
+  outname_1 <- paste(strsplit(x,'/')[[1]][3],'_R1.fastq', sep = '')
+  outname_2 <- paste(strsplit(x,'/')[[1]][3],'_R2.fastq', sep = '')
   # Get all the names of the fastqs in each folder 
-  flist <- list.files(x, full.names = T)
+  flist_1 <- list.files(x, full.names = T, pattern = '_R1_')
+  flist_2 <- list.files(x, full.names = T, pattern = '_R2_')
   # Create another loop that gets the files in flist to add them into one file
-  for (y in flist){
+  for (y in flist_1){
     # Read file with readFastq()
     yfile <- readFastq(y)
-    writeFastq(yfile, outname, mode = 'a', compress = T)
+    writeFastq(yfile, outname_1, mode = 'a', compress = T)
+  }
+  for (y in flist_2){
+    # Read file with readFastq()
+    yfile <- readFastq(y)
+    writeFastq(yfile, outname_2, mode = 'a', compress = T)
   }
 }
 
@@ -33,16 +38,15 @@ library(Rsubread)
 buildindex('h_index','GRCh38.p13.genome.fa.gz', gappedIndex = T, memory = 10000)
 
 ## Make .bam files with align()
-afiles <- list.files(pattern = '.fastq')
-for (x in afiles){
-  align('h_index',x)
+afiles <- list.files(pattern = '_R1.fastq')
+bfiles <- list.files(pattern = '_R2.fastq')
+for (x in 1:length(afiles)){
+  f1 = afiles[x]
+  f2 = bfiles[x]
+  align('h_index',f1,readfile2 = f2 )
 }
 
 ################ DAY 2 ##############################################################
-
-## Speed things up! Parallelize everything. I have 8 cores, so I'll use them all.
-library("BiocParallel")
-register(SnowParam(8))
 
 ## Map all the reads to genomic "features"(genes) with featureCounts
 # All files with .BAM as the *end*
@@ -104,7 +108,6 @@ EnhancedVolcano(IL13_7v1, IL13_7v1$Symbols,'log2FoldChange','padj')
 library(genefilter)
 library(pheatmap)
 
-rld <- rlog(IL13dds)
 topVarGenes <- head(order(-rowVars(assay(rld))),20)
 mat <- assay(rld)[ topVarGenes, ]
 heat_ids <- str_replace(row.names(mat),
@@ -118,17 +121,14 @@ heatsyms <- mapIds(org.Hs.eg.db,
 rownames(mat) <- heatsyms
 mat <- mat - rowMeans(mat)
 df <- as.data.frame(colData(rld)[,c('samples','group')])
-pheatmap(mat, annotation_col=df, cluster_cols = F)
+pheatmap(mat, annotation_col=df, cluster_cols = F, cluster_rows = T)
 
-# Cutoff the FC 
-sig7v1ds <- IL13_7v1[which(IL13_7v1$log2FoldChange>=abs(1)),]
+# Cutoff the FC
+sig3v1ds <- IL13_3v1[which(IL13_3v1$log2FoldChange>=abs(1)),]
 
 # Cutoff the pvalue (padj)
-sig7v1ds <- sig7v1ds[which(sig7v1ds$padj<=0.1),]
+sig7v1ds <- IL13_7v1[which(IL13_7v1$padj<=0.01),]
 
 # Write results
-write.csv(as.data.frame(sig7v1ds[,c(7,2)],row.names = NULL), file = 'RSCM_IL13_7v1.csv')
-
-# Test no FC cutoff
-sig7v1ds <- IL13_7v1[which(IL13_7v1$padj<=0.1),]
+write.csv(as.data.frame(IL13_3v1[,c(7,2,6)],row.names = NULL), file = 'RSCM_IL13_3v1.csv')
 write.csv(as.data.frame(sig7v1ds[,c(7,2)],row.names = NULL), file = 'RSCM_IL13_7v1.csv')
