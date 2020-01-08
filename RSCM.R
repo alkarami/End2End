@@ -1,3 +1,6 @@
+## Everything to install
+BiocManager::install(c('ShortRead','Rsubread','DESeq2','EnhancedVolcano','genefilter','pheatmap','Rsamtools'), update = T, ask = F)
+
 ## Speed things up! Parallelize everything. I have 8 cores, so I'll use them all.
 library("BiocParallel")
 register(SnowParam(8))
