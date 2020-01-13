@@ -9,16 +9,16 @@ library(ShortRead)
 
 ## Define locations for raw files
 paths <- list.dirs()
-paths <- list.dirs()[2:length(paths)][c(F,T)]
+paths <- list.dirs()[2:length(paths)]
 
 ## Access the raw file folders with readFastq()
 for (x in paths){
   # Set the output name: We want the name of the folder where the fastq files are 
-  # contained. Here it is the 3rd element of the 1st element ([[1]][3]) of the string x 
+  # contained. Here it is the 2nd element of the 1st element ([[1]][2]) of the string x 
   # after we've split it (strsplit()) by the '/'. We want to add the extension .fastq, 
   # so we paste '.fastq' to the end of the name
-  outname_1 <- paste(strsplit(x,'/')[[1]][3],'_R1.fastq', sep = '')
-  outname_2 <- paste(strsplit(x,'/')[[1]][3],'_R2.fastq', sep = '')
+  outname_1 <- paste(strsplit(x,'/')[[1]][2],'_R1.fastq', sep = '')
+  outname_2 <- paste(strsplit(x,'/')[[1]][2],'_R2.fastq', sep = '')
   # Get all the names of the fastqs in each folder 
   flist_1 <- list.files(x, full.names = T, pattern = '_R1_')
   flist_2 <- list.files(x, full.names = T, pattern = '_R2_')
@@ -37,6 +37,7 @@ for (x in paths){
 
 library(Rsubread)
 
+## SKIP THIS PART IF YOU ALREADY HAVE THE INDEX! 
 ## Build index, make sure it's gapped! Total time: 45.7 minutes using 10G Memory
 buildindex('h_index','GRCh38.p13.genome.fa.gz', gappedIndex = T, memory = 10000)
 
