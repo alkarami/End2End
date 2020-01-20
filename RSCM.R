@@ -39,7 +39,7 @@ library(Rsubread)
 
 ## SKIP THIS PART IF YOU ALREADY HAVE THE INDEX! 
 ## Build index, make sure it's gapped! Total time: 45.7 minutes using 10G Memory
-buildindex('h_index','GRCh38.p13.genome.fa.gz', gappedIndex = T, memory = 10000)
+buildindex('m2','GRCm38.p6.genome.fa.gz', gappedIndex = T)
 
 ## Make .bam files with align()
 afiles <- list.files(pattern = '_R1.fastq')
@@ -47,7 +47,7 @@ bfiles <- list.files(pattern = '_R2.fastq')
 for (x in 1:length(afiles)){
   f1 = afiles[x]
   f2 = bfiles[x]
-  align('h_index',f1,readfile2 = f2 )
+  align('m2',f1,readfile2 = f2 )
 }
 
 ################ DAY 2 ##############################################################
@@ -56,8 +56,8 @@ for (x in 1:length(afiles)){
 # All files with .BAM as the *end*
 bams <- list.files(pattern = '.BAM$')
 # Save the counts as a matrix
-fc <- featureCounts(files=bams, annot.ext = 'gencode.v32.annotation.gtf.gz',
-                    isGTFAnnotationFile = T, nthreads = 8)
+fc <- featureCounts(files=bams, annot.ext = 'gencode.v32.annotation.gtf.gz', isPairedEnd= T, 
+                    GTF.attrType="gene_name", isGTFAnnotationFile = T, nthreads = 4)
 
 ## Rename observations according to metadata
 meta <- read.csv('reshu_meta.csv')
