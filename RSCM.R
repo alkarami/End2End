@@ -47,7 +47,7 @@ bfiles <- list.files(pattern = '_R2.fastq')
 for (x in 1:length(afiles)){
   f1 = afiles[x]
   f2 = bfiles[x]
-  align('m2',f1,readfile2 = f2 )
+  align('m2',f1,readfile2 = f2, nthreads = 4)
 }
 
 ################ DAY 2 ##############################################################
