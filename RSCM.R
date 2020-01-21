@@ -44,11 +44,8 @@ buildindex('m2','GRCm38.p6.genome.fa.gz', gappedIndex = T)
 ## Make .bam files with align()
 afiles <- list.files(pattern = '_R1.fastq')
 bfiles <- list.files(pattern = '_R2.fastq')
-for (x in 1:length(afiles)){
-  f1 = afiles[x]
-  f2 = bfiles[x]
-  align('m2',f1,readfile2 = f2, nthreads = 4)
-}
+align('m2',afiles,readfile2 = bfiles)
+
 
 ################ DAY 2 ##############################################################
 
