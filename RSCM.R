@@ -49,61 +49,44 @@ align('m2',afiles,readfile2 = bfiles)
 
 ################ DAY 2 ##############################################################
 
-## Map all the reads to genomic "features"(genes) with featureCounts
-# All files with .BAM as the *end*
+## Make .bam files with align()
+afiles <- list.files(pattern = '_R1.fastq')
+bfiles <- list.files(pattern = '_R2.fastq')
+align('m2',afiles,readfile2 = bfiles, nthreads = 4)
+
+# Run featurecounts to count reads mapped to each feature (gene)
 bams <- list.files(pattern = '.BAM$')
-# Save the counts as a matrix
-fc <- featureCounts(files=bams, annot.ext = 'gencode.v32.annotation.gtf.gz', isPairedEnd= T, 
+fc <- featureCounts(files=bams, annot.ext = 'gencode.vM24.annotation.gtf.gz', isPairedEnd= T, 
                     GTF.attrType="gene_name", isGTFAnnotationFile = T, nthreads = 4)
 
-## Rename observations according to metadata
-meta <- read.csv('reshu_meta.csv')
-colnames(fc$counts) <- meta$samples
-## Check out what your matrix looks like for the entire experiment.
-# Your column names should be the short form of the data files (I.e. 'Control-1')
-# Rows should be the Ensemble gene ID's (I.e. 'ENSGxxxxx.5')
-fc$counts
+# Create metadata, instructions on how to group the samples
+samples <- colnames(fc$counts)
+ed.samples <- c()
+for (x in samples){
+  ed.samples <- append(ed.samples,strsplit(x,split = 'R1')[[1]][1])
+}
+colnames(fc$counts) <- ed.samples
+CytoID <- c('Neg','Pos','Neg','Pos','Neg','Pos','Neg','Pos')
+Sex <- c('F','F','F','F','M','M','M','M')
+meta <- as.data.frame(cbind(ed.samples,CytoID,Sex))
 
-## Now we start with DESeq2
 library(DESeq2)
 
 # Create DESeqDataSet 
-IL13ds <- DESeqDataSetFromMatrix(countData = fc$counts, colData = meta, design = ~group)
+CytoIDds <- DESeqDataSetFromMatrix(countData = fc$counts, colData = meta, design = ~Sex+CytoID)
 
 # Run DESeq2, which is the core of the code. It is *very* fast.
-IL13dds <- DESeq(IL13ds)
+CytoIDdds <- DESeq(CytoIDds)
 
-# Run PCA to see how similar the samples are
-rld <- rlog(IL13dds)
-plotPCA(rld,intgroup = 'group')
+# PCA
+rld <- rlog(CytoIDdds)
+p1 <- plotPCA(rld,intgroup = 'CytoID')
+p2 <- plotPCA(rld,intgroup = 'Sex')
+plot_grid(p1,p2, ncol = 1)
 
-# Let's check out results
-IL13_3v1 <- results(IL13dds, contrast = c('group','3d','cont'), alpha = 0.05)
-IL13_7v1 <- results(IL13dds, contrast = c('group','7d','cont'), alpha = 0.05)
-
-# Add gene symbols to the results
-library(stringr)
-gene_ids <- str_replace(row.names(IL13dds),
-                        pattern = ".[0-9]+$",
-                        replacement = "")
-
-BiocManager::install(c('AnnotationDbi','org.Hs.eg.db'), ask = F, update = T)
-
-library("AnnotationDbi")
-library("org.Hs.eg.db")
-symbols <- mapIds(org.Hs.eg.db,
-                  keys=gene_ids,
-                  column="SYMBOL",
-                  keytype="ENSEMBL",
-                  multiVals="first")
-
-IL13_3v1$Symbols <- symbols
-IL13_7v1$Symbols <- symbols
-
-# Check it out with a volcano plot
-library(EnhancedVolcano)
-EnhancedVolcano(IL13_3v1, IL13_7v1$Symbols,'log2FoldChange','padj')
-EnhancedVolcano(IL13_7v1, IL13_7v1$Symbols,'log2FoldChange','padj')
+# Get results for DEGs
+CytoID_HvL <- results(CytoIDdds, contrast = c('CytoID','Pos','Neg'), alpha = 0.01)
+Sex_FvM <- results(CytoIDdds, contrast = c('Sex','F','M'), alpha = 0.05)
 
 # Make a heatmap
 library(genefilter)
@@ -124,12 +107,3 @@ mat <- mat - rowMeans(mat)
 df <- as.data.frame(colData(rld)[,c('samples','group')])
 pheatmap(mat, annotation_col=df, cluster_cols = F, cluster_rows = T)
 
-# Cutoff the FC
-sig3v1ds <- IL13_3v1[which(IL13_3v1$log2FoldChange>=abs(1)),]
-
-# Cutoff the pvalue (padj)
-sig7v1ds <- IL13_7v1[which(IL13_7v1$padj<=0.01),]
-
-# Write results
-write.csv(as.data.frame(IL13_3v1[,c(7,2,6)],row.names = NULL), file = 'RSCM_IL13_3v1.csv')
-write.csv(as.data.frame(sig7v1ds[,c(7,2)],row.names = NULL), file = 'RSCM_IL13_7v1.csv')
