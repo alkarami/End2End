@@ -1,4 +1,5 @@
 ## Everything to install
+install.packages('BiocManager')
 BiocManager::install(c('ShortRead','Rsubread','DESeq2','EnhancedVolcano','genefilter','pheatmap','Rsamtools'), update = T, ask = F)
 
 ## Speed things up! Parallelize everything. I have 8 cores, so I'll use them all.
@@ -94,15 +95,6 @@ library(pheatmap)
 
 topVarGenes <- head(order(-rowVars(assay(rld))),20)
 mat <- assay(rld)[ topVarGenes, ]
-heat_ids <- str_replace(row.names(mat),
-                        pattern = ".[0-9]+$",
-                        replacement = "")
-heatsyms <- mapIds(org.Hs.eg.db,
-                              keys=heat_ids,
-                              column="SYMBOL",
-                              keytype="ENSEMBL",
-                              multiVals="first")
-rownames(mat) <- heatsyms
 mat <- mat - rowMeans(mat)
 df <- as.data.frame(colData(rld)[,c('samples','group')])
 pheatmap(mat, annotation_col=df, cluster_cols = F, cluster_rows = T)
