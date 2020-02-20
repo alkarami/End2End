@@ -93,3 +93,13 @@ mat <- mat - rowMeans(mat)
 df <- as.data.frame(colData(rld)[,c('CytoID','Sex')])
 pheatmap(mat, annotation_col=df, cluster_cols = T, cluster_rows = T)
 
+# Finally, write DEG list to CSV
+write.csv(as.data.frame(CytoID_HvL), file = 'DEGList_PCutoff_0.01.csv')
+
+# Too many genes? Cut the list further using the which() statement
+# Cut off the genes at +/- 1 FC
+Cyto_FC_1 <- CytoID_HvL[which(abs(CytoID_HvL$log2FoldChange)>1),]
+# Cut off the genes at a lower p value 
+Cyto_P_0.001 <- CytoID_HvL[which(CytoID_HvL$padj<0.001),]
+
+# You can then write the objects like you did for CytoID_HvL previously
