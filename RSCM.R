@@ -42,12 +42,6 @@ library(Rsubread)
 ## Build index, make sure it's gapped! Total time: 45.7 minutes using 10G Memory
 buildindex('m2','GRCm38.p6.genome.fa.gz', gappedIndex = T)
 
-## Make .bam files with align()
-afiles <- list.files(pattern = '_R1.fastq')
-bfiles <- list.files(pattern = '_R2.fastq')
-align('m2',afiles,readfile2 = bfiles)
-
-
 ################ DAY 2 ##############################################################
 
 ## Make .bam files with align()
@@ -96,6 +90,6 @@ library(pheatmap)
 topVarGenes <- head(order(-rowVars(assay(rld))),20)
 mat <- assay(rld)[ topVarGenes, ]
 mat <- mat - rowMeans(mat)
-df <- as.data.frame(colData(rld)[,c('samples','group')])
-pheatmap(mat, annotation_col=df, cluster_cols = F, cluster_rows = T)
+df <- as.data.frame(colData(rld)[,c('CytoID','Sex')])
+pheatmap(mat, annotation_col=df, cluster_cols = T, cluster_rows = T)
 
